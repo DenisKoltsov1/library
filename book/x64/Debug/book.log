@@ -1,0 +1,4 @@
+﻿  Main_sfml.cpp
+Main_sfml.obj : error LNK2019: ссылка на неразрешенный внешний символ "__declspec(dllimport) public: void __cdecl sf::Window::close(void)" (__imp_?close@Window@sf@@QEAAXXZ) в функции main.
+Main_sfml.obj : error LNK2019: ссылка на неразрешенный внешний символ "__declspec(dllimport) public: bool __cdecl sf::Window::pollEvent(class sf::Event &)" (__imp_?pollEvent@Window@sf@@QEAA_NAEAVEvent@2@@Z) в функции main.
+C:\book\book\x64\Debug\book.exe : fatal error LNK1120: неразрешенных внешних элементов: 2
