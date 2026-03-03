@@ -1,6 +1,6 @@
 #include "book.h"
 #include <iostream>
-Book::Book(std::string name_, unsigned short age_, std::string author_) : name(name_), age(age_), author(author_) {};
+Book::Book(std::string name_, unsigned short age_, std::string author_) : name(name_), age(age_), author(author_) { value++; }
 
 
 Book& Book::open_book(Book& object)
@@ -18,4 +18,9 @@ Book& Book:: take_book(Book& object) {
 	// Ћогика: нажатие клавиши и открытие
 	std::cout << " нига вз€та" << std::endl;
 	return object;
+	}
+
+int Book::value = 1;
+int Book::getCount() {
+	return value;
 }
