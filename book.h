@@ -20,7 +20,7 @@ public:
 	// Метод возвращает ссылку на объект Book
 	Book& open_book(Book& object);
 	Book& take_book(Book& object);
-
+	bool isSelected = false;
 	static int getCount();
 	void setCount(int n) { value = n; }
 };

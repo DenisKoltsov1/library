@@ -1,6 +1,7 @@
 #include "C:/raylib/raylib-5.5_win64_msvc16/include/raylib.h"
 #include "book.h"
 #include "polka_book.h"
+#include <vector>
 
 #pragma comment(lib, "C:/raylib/raylib-5.5_win64_msvc16/lib/raylib.lib")
 #pragma comment(lib, "winmm.lib")
@@ -9,72 +10,103 @@
 #pragma comment(lib, "shell32.lib")
 
 int main() {
-    // 1. Инициализация окна (950x950)
-    InitWindow(950, 950, "Library Shelves - Rainbow Edition");
+    // 1. Инициализация окна
+    InitWindow(950, 950, "Library: Click & Read");
     SetTargetFPS(60);
 
-    // 2. Создание объектов и настройка данных
-    Book book1("war_of_peace", 1895, "Tolstoy");
-    book1.setCount(8); // Устанавливаем 8 книг через ваш исправленный метод
+    // 2. Создание списка уникальных книг (объектов)
+    std::vector<Book> myBooks;
+    myBooks.push_back(Book("War and Peace", 1869, "Tolstoy"));
+    myBooks.push_back(Book("1984", 1949, "Orwell"));
+    myBooks.push_back(Book("The Witcher", 1990, "Sapkowski"));
+    myBooks.push_back(Book("Harry Potter", 1997, "Rowling"));
+    myBooks.push_back(Book("Dracula", 1897, "Stoker"));
 
     CountShelf myShelf(5);
     int totalShelves = myShelf.getSize();
-    int shelfSpacing = 150; // Расстояние между полками (высота пролета)
+    int shelfSpacing = 150;
 
-    // Палитра цветов для книг
+    // Цвета для книг
     Color palette[] = { RED, ORANGE, YELLOW, GREEN, BLUE, MAGENTA, GOLD, LIME };
-    int paletteSize = 8;
+    const char* statusText = "Click a book to select it";
 
-    // 3. Основной игровой цикл
+    // 3. Основной цикл
     while (!WindowShouldClose()) {
+        Vector2 mousePos = GetMousePosition();
+
+        // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ ---
+        for (int i = 0; i < myBooks.size(); i++) {
+            int secondShelfY = 100 + (1 * shelfSpacing);
+            int bookWidth = 65;
+            int bookHeight = 110;
+            int bookX = 110 + (i * (bookWidth + 5));
+
+            // Прямоугольник для проверки столкновения с мышкой
+            Rectangle bookRect = { (float)bookX, (float)secondShelfY - bookHeight, (float)bookWidth, (float)bookHeight };
+
+            // Если кликнули мышкой по книге
+            if (CheckCollisionPointRec(mousePos, bookRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                // Снимаем выбор со всех и выбираем текущую
+                for (auto& b : myBooks) b.isSelected = false;
+                myBooks[i].isSelected = true;
+                statusText = "Book selected! Press E to Read, D to Put back";
+            }
+
+            // Обработка клавиш для выбранной книги
+            if (myBooks[i].isSelected) {
+                if (IsKeyPressed(KEY_E)) statusText = "Reading... (Title: 1984)";
+                if (IsKeyPressed(KEY_D)) {
+                    myBooks[i].isSelected = false;
+                    statusText = "Book returned to shelf";
+                }
+            }
+        }
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        // --- ОТРИСОВКА СТЕЛЛАЖА (Вертикальные стойки) ---
-        DrawRectangle(90, 100, 10, 750, DARKGRAY);  // Левая стойка
-        DrawRectangle(700, 100, 10, 750, DARKGRAY); // Правая стойка
+        // --- 1. РИСУЕМ БОКОВЫЕ СТОЙКИ СТЕЛЛАЖА ---
+        DrawRectangle(90, 100, 10, 750, DARKGRAY);  // Левая
+        DrawRectangle(700, 100, 10, 750, DARKGRAY); // Правая
 
-        // --- ОТРИСОВКА ПОЛОК (Коричневые доски) ---
+        // --- 2. РИСУЕМ ПОЛКИ ---
         for (int i = 0; i < totalShelves; i++) {
             int shelfY = 100 + (i * shelfSpacing);
-            // Рисуем доску полки
-            DrawRectangle(100, shelfY, 600, 15, BROWN);
-            // Номер полки (выровнен по правому краю стеллажа)
+            DrawRectangle(100, shelfY, 600, 15, BROWN); // Доска полки
             DrawText(TextFormat("Shelf #%i", i + 1), 720, shelfY - 5, 18, GRAY);
         }
 
-        // --- ОТРИСОВКА РАЗНОЦВЕТНЫХ КНИГ НА ВТОРОЙ ПОЛКЕ ---
-        int count_book = book1.getCount();
-        int secondShelfY = 100 + (1 * shelfSpacing); // Координата Y второй полки
+        // --- 3. РИСУЕМ КНИГИ ---
+        int secondShelfY = 100 + (1 * shelfSpacing);
+        int bookWidth = 65;
+        int bookHeight = 110;
 
-        int bookWidth = 60;   // Большая ширина
-        int bookHeight = 115; // Большая высота (почти до верхней полки)
-
-        for (int i = 0; i < count_book; i++) {
-            // Рассчитываем X для каждой книги (ширина книги + зазор 5 пикселей)
+        for (int i = 0; i < myBooks.size(); i++) {
             int bookX = 110 + (i * (bookWidth + 5));
+            int drawY = secondShelfY - bookHeight; // Стандартная позиция на полке
 
-            // Выбираем цвет из палитры по кругу
-            Color currentBookColor = palette[i % paletteSize];
+            // Если книга выбрана — выдвигаем её чуть НИЖЕ
+            if (myBooks[i].isSelected) {
+                drawY += 15;
+                // Рисуем золотую рамку вокруг выбранной книги
+                DrawRectangleLinesEx({ (float)bookX - 2, (float)drawY - 2, (float)bookWidth + 4, (float)bookHeight + 4 }, 2, GOLD);
+            }
 
-            // 1. Рисуем тело книги
-            // (secondShelfY - bookHeight) — чтобы книга стояла НА доске
-            DrawRectangle(bookX, secondShelfY - bookHeight, bookWidth, bookHeight, currentBookColor);
-
-            // 2. Рисуем контур книги (черный), чтобы они не сливались
-            DrawRectangleLines(bookX, secondShelfY - bookHeight, bookWidth, bookHeight, BLACK);
-
-            // 3. Рисуем надпись "BOOK" (черным цветом для контраста с яркими цветами)
-            DrawText("BOOK", bookX + 8, secondShelfY - (bookHeight / 2) - 5, 15, BLACK);
+            // Рисуем тело книги
+            DrawRectangle(bookX, drawY, bookWidth, bookHeight, palette[i % 8]);
+            // Рисуем контур
+            DrawRectangleLines(bookX, drawY, bookWidth, bookHeight, BLACK);
+            // Надпись на книге
+            DrawText("BOOK", bookX + 10, drawY + 45, 15, BLACK);
         }
 
-        // Статистика в верхнем углу
-        DrawText(TextFormat("Total Books: %i", count_book), 20, 20, 25, RED);
+        // --- 4. ИНТЕРФЕЙС ---
+        DrawText(statusText, 20, 20, 22, DARKGRAY);
+        DrawText("E - Read | D - Put back", 20, 50, 18, MAROON);
 
         EndDrawing();
     }
 
-    // 4. Завершение работы программы
     CloseWindow();
     return 0;
 }
