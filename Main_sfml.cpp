@@ -1,6 +1,7 @@
 #include "C:/raylib/raylib-5.5_win64_msvc16/include/raylib.h"
 #include "book.h"
 #include "polka_book.h"
+#include "connect.h"
 #include <vector>
 
 #pragma comment(lib, "C:/raylib/raylib-5.5_win64_msvc16/lib/raylib.lib")
@@ -10,6 +11,8 @@
 #pragma comment(lib, "shell32.lib")
 
 int main() {
+    ConnectDB myDb;
+    std::cout << "!!! ÏÎÏÛÒÊÀ ÑÎÇÄÀÒÜ ÁÀÇÓ ÄÀÍÍÛÕ !!!" << std::endl;
     // 1. Èíèöèàëèçàöèÿ îêíà
     InitWindow(950, 950, "Library: Click & Read");
     SetTargetFPS(60);
