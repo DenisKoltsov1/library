@@ -133,12 +133,14 @@
   <ItemGroup>
     <ClInclude Include="book.h" />
     <ClInclude Include="connect.h" />
+    <ClInclude Include="parsing.h" />
     <ClInclude Include="polka_book.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="book.cpp" />
     <ClCompile Include="connect.cpp" />
     <ClCompile Include="Main_sfml.cpp" />
+    <ClCompile Include="parsing.cpp" />
     <ClCompile Include="polka_book.cpp" />
     <ClCompile Include="sqlite3.c" />
   </ItemGroup>

@@ -4,7 +4,9 @@
 
 // 1. Конструктор: открывает базу и создает таблицу
 ConnectDB::ConnectDB() : db(nullptr) {
-    int result = sqlite3_open("test.db", &db);
+    // Вместо "test.db" напиши полный путь:
+    int result = sqlite3_open("C:/book/book/test.db", &db);
+
 
     if (result != SQLITE_OK) {
         std::cerr << "Ошибка открытия БД: " << sqlite3_errmsg(db) << std::endl;
@@ -36,3 +38,32 @@ ConnectDB::~ConnectDB() {
         std::cout << "Соединение с БД закрыто." << std::endl;
     }
 }
+    // ... твой текущий код (конструктор и деструктор) остается выше ...
+
+// 3. Реализация метода вставки данных
+    void ConnectDB::insertBook(const std::string & name, const std::string & author, int age) {
+        // Используем sqlite3_mprintf — это безопасный способ собрать SQL-запрос.
+        // %Q сам добавит кавычки и защитит от ошибок, если в названии книги есть апостроф.
+        char* sql = sqlite3_mprintf(
+            "INSERT INTO BOOKS (NAME, AUTHOR, AGE, IS_SELECTED) VALUES (%Q, %Q, %d, 0);",
+            name.c_str(), author.c_str(), age
+        );
+
+        char* errorMessage = nullptr;
+
+        // Выполняем запрос
+        int result = sqlite3_exec(db, sql, nullptr, nullptr, &errorMessage);
+
+        if (result != SQLITE_OK) {
+            std::cerr << "Ошибка записи в БД: " << errorMessage << std::endl;
+            sqlite3_free(errorMessage);
+        }
+        else {
+            std::cout << "БАЗА: Книга '" << name << "' успешно сохранена!" << std::endl;
+        }
+
+        // Обязательно освобождаем память, выделенную mprintf
+        sqlite3_free(sql);
+    }
+
+
