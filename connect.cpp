@@ -1,6 +1,7 @@
 #include "connect.h"
 #include <iostream>
 #include <string>
+#include <vector>
 
 // 1. Конструктор: открывает базу и создает таблицу
 ConnectDB::ConnectDB() : db(nullptr) {
@@ -65,5 +66,45 @@ ConnectDB::~ConnectDB() {
         // Обязательно освобождаем память, выделенную mprintf
         sqlite3_free(sql);
     }
+
+     int ConnectDB::countCallback(void* NotUsed, int argc, char** argv, char** azColName) {
+        for (int i = 0; i < argc; i++) {
+            std::cout << azColName[i] << ": " << (argv[i] ? argv[i] : "NULL") << " ";
+        }
+        std::cout << std::endl;
+        return 0;
+    }
+
+     // В файле connect.cpp
+     std::vector<Book> ConnectDB::showBook() {
+         std::vector<Book> books;
+         // ВАЖНО: имена колонок и таблицы как в твоем CREATE TABLE
+         const char* sql = "SELECT NAME, AGE, AUTHOR FROM BOOKS;";
+         sqlite3_stmt* stmt;
+
+         if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+             while (sqlite3_step(stmt) == SQLITE_ROW) {
+                 // Индекс 0 = NAME (Text)
+                 const char* c_name = (const char*)sqlite3_column_text(stmt, 0);
+                 std::string name = c_name ? c_name : "Unknown";
+
+                 // Индекс 1 = AGE (Int)
+                 int year = sqlite3_column_int(stmt, 1);
+
+                 // Индекс 2 = AUTHOR (Text)
+                 const char* c_author = (const char*)sqlite3_column_text(stmt, 2);
+                 std::string author = c_author ? c_author : "Unknown";
+
+                 // Добавляем в вектор
+                 books.push_back(Book(name, year, author));
+             }
+         }
+         else {
+             std::cerr << "SQL Error: " << sqlite3_errmsg(db) << std::endl;
+         }
+
+         sqlite3_finalize(stmt);
+         return books;
+     }
 
 

@@ -2,10 +2,12 @@
 #include "book.h"
 #include "polka_book.h"
 #include "connect.h"
-#include "parsing.h" // Твой новый класс для парсинга
+#include "parsing.h" 
 #include <vector>
 #include <iostream>
+#include <string>
 
+// Подключение библиотек для компилятора MSVC
 #pragma comment(lib, "C:/raylib/raylib-5.5_win64_msvc16/lib/raylib.lib")
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "gdi32.lib")
@@ -13,67 +15,92 @@
 #pragma comment(lib, "shell32.lib")
 
 int main() {
-    // 1. Инициализация базы данных (создаст таблицу, если её нет)
+    // 1. Инициализация базы данных
     ConnectDB myDb;
-    std::cout << "!!! База данных инициализирована !!!" << std::endl;
 
     // 2. Инициализация окна Raylib
-    InitWindow(950, 950, "Library: Drag & Drop PDF to Shelf");
+    InitWindow(950, 950, "Library: [D] Take/Put | [E] Read");
     SetTargetFPS(60);
 
-    // Список книг на полке (загружаем начальные данные)
-    std::vector<Book> myBooks;
-    myBooks.push_back(Book("War and Peace", 1869, "Tolstoy"));
-    myBooks.push_back(Book("1984", 1949, "Orwell"));
+    // Загружаем существующие книги из БД
+    std::vector<Book> myBooks = myDb.showBook();
 
-    CountShelf myShelf(5);
-    int totalShelves = myShelf.getSize();
+    // Указатель на книгу, которую мы держим в руках
+    Book* bookInHand = nullptr;
+
     int shelfSpacing = 150;
-
     Color palette[] = { RED, ORANGE, YELLOW, GREEN, BLUE, MAGENTA, GOLD, LIME };
-    const char* statusText = "Drag a PDF file here to add it!";
+    const char* statusText = "Click to Select | [D] Take/Put | [E] Read";
 
     while (!WindowShouldClose()) {
-        // --- ЛОГИКА DRAG & DROP ---
+        // --- ЛОГИКА DRAG & DROP (Добавление книг) ---
         if (IsFileDropped()) {
             FilePathList droppedFiles = LoadDroppedFiles();
-
             for (unsigned int i = 0; i < droppedFiles.count; i++) {
                 try {
-                    // Создаем объект парсера для пути, который дал Raylib
                     ParsingBook parser(droppedFiles.paths[i]);
-
-                    // Парсим и сохраняем в SQLite
                     parser.parse(myDb);
-
-                    // Сразу добавляем книгу в визуальный список, чтобы она появилась на полке
-                    // Мы берем данные, которые парсер вытащил из PDF (через геттеры)
+                    // Создаем книгу (используем age, как в твоем классе)
                     myBooks.push_back(Book(parser.getTitle(), parser.getYear(), parser.getAuthor()));
-
-                    statusText = "Book added successfully to DB and Shelf!";
+                    statusText = "Book added to shelf!";
                 }
-                catch (const std::exception& e) {
-                    statusText = "Error: Not a valid PDF or file busy";
-                    std::cerr << "Parsing error: " << e.what() << std::endl;
+                catch (...) {
+                    statusText = "Error: Could not parse PDF";
                 }
             }
-            UnloadDroppedFiles(droppedFiles); // Обязательно очищаем память Raylib
+            UnloadDroppedFiles(droppedFiles);
         }
 
-        // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ (Твой код) ---
         Vector2 mousePos = GetMousePosition();
-        for (int i = 0; i < myBooks.size(); i++) {
-            int bookWidth = 65;
-            int bookHeight = 110;
-            // Рассчитываем позицию (для примера все на 2-й полке)
-            int bookX = 110 + (i * (bookWidth + 5));
-            int shelfY = 100 + (1 * shelfSpacing);
-            Rectangle bookRect = { (float)bookX, (float)shelfY - bookHeight, (float)bookWidth, (float)bookHeight };
 
-            if (CheckCollisionPointRec(mousePos, bookRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                for (auto& b : myBooks) b.isSelected = false;
-                myBooks[i].isSelected = true;
-                statusText = "Selected: Press E to Read";
+        // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ ---
+
+        // 1. ВЫБОР КНИГИ (только если в руках ничего нет)
+        if (bookInHand == nullptr) {
+            for (int i = 0; i < (int)myBooks.size(); i++) {
+                int bookX = 110 + (i * 70);
+                int shelfY = 100 + (1 * shelfSpacing);
+                Rectangle bookRect = { (float)bookX, (float)shelfY - 110, 65.0f, 110.0f };
+
+                if (CheckCollisionPointRec(mousePos, bookRect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    for (auto& b : myBooks) b.isSelected = false;
+                    myBooks[i].isSelected = true;
+                    statusText = "Selected! [E] to Read, [D] to Take";
+                }
+            }
+        }
+
+        // 2. КЛАВИША E - ЧИТАТЬ (вывод данных в консоль)
+        if (IsKeyPressed(KEY_E)) {
+            for (auto& b : myBooks) {
+                if (b.isSelected) {
+                    statusText = "Reading... (Check Console)";
+                    // Используем b.age, так как это имя в твоем классе Book
+                    std::cout << ">>> КНИГА: " << b.name << " | ГОД: " << b.age << " | АВТОР: " << b.author << std::endl;
+                }
+            }
+        }
+
+        // 3. КЛАВИША D - ВЗЯТЬ / ПОЛОЖИТЬ
+        if (IsKeyPressed(KEY_D)) {
+            if (bookInHand == nullptr) {
+                // Если руки пусты — пытаемся ВЗЯТЬ выделенную книгу
+                for (int i = 0; i < (int)myBooks.size(); i++) {
+                    if (myBooks[i].isSelected) {
+                        bookInHand = new Book(myBooks[i]); // Копируем в "руки"
+                        myBooks.erase(myBooks.begin() + i); // Удаляем с полки
+                        statusText = "You took the book! [D] to put it back.";
+                        break;
+                    }
+                }
+            }
+            else {
+                // Если книга в руках — КЛАДЕМ её обратно на полку
+                bookInHand->isSelected = false;
+                myBooks.push_back(*bookInHand);
+                delete bookInHand; // Очищаем память
+                bookInHand = nullptr;
+                statusText = "Book put back on shelf.";
             }
         }
 
@@ -81,34 +108,49 @@ int main() {
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        // Рисуем полки
-        for (int i = 0; i < totalShelves; i++) {
+        // 1. Рисуем боковые стойки шкафа (рейки)
+        DrawRectangle(90, 100, 10, 750, DARKGRAY);  // Левая
+        DrawRectangle(700, 100, 10, 750, DARKGRAY); // Правая
+
+        // 2. Рисуем горизонтальные полки
+        for (int i = 0; i < 5; i++) {
             int shelfY = 100 + (i * shelfSpacing);
             DrawRectangle(100, shelfY, 600, 15, BROWN);
-            DrawRectangle(90, 100, 10, 750, DARKGRAY);  // Стойка левая
-            DrawRectangle(700, 100, 10, 750, DARKGRAY); // Стойка правая
         }
 
-        // Рисуем книги из вектора
-        for (int i = 0; i < myBooks.size(); i++) {
-            int bookWidth = 65;
-            int bookHeight = 110;
-            int bookX = 110 + (i * (bookWidth + 5));
-            int drawY = (100 + 1 * shelfSpacing) - bookHeight;
+        // 3. Рисуем книги на полке (все на 2-й полке для примера)
+        for (int i = 0; i < (int)myBooks.size(); i++) {
+            int bookX = 110 + (i * 70);
+            int drawY = (100 + 1 * shelfSpacing) - 110;
 
+            // Визуальный эффект выбора
             if (myBooks[i].isSelected) drawY += 15;
 
-            DrawRectangle(bookX, drawY, bookWidth, bookHeight, palette[i % 8]);
-            DrawRectangleLines(bookX, drawY, bookWidth, bookHeight, BLACK);
+            DrawRectangle(bookX, drawY, 65, 110, palette[i % 8]);
+            DrawRectangleLines(bookX, drawY, 65, 110, BLACK);
 
-            // Пишем первые 5 букв названия на корешке
-            DrawText(myBooks[i].name.substr(0, 5).c_str(), bookX + 5, drawY + 45, 12, BLACK);
+            // Название (первые 5 букв)
+            std::string label = (myBooks[i].name.length() >= 5) ? myBooks[i].name.substr(0, 5) : myBooks[i].name;
+            DrawText(label.c_str(), bookX + 5, drawY + 45, 12, BLACK);
         }
 
+        // 4. Рисуем книгу "в руках" (справа от шкафа)
+        if (bookInHand != nullptr) {
+            DrawText("IN HAND", 750, 370, 20, DARKBLUE);
+            DrawRectangle(755, 405, 65, 110, GOLD);
+            DrawRectangleLines(755, 405, 65, 110, BLACK);
+            std::string label = (bookInHand->name.length() >= 5) ? bookInHand->name.substr(0, 5) : bookInHand->name;
+            DrawText(label.c_str(), 760, 450, 12, BLACK);
+        }
+
+        // 5. Статусный текст
         DrawText(statusText, 20, 20, 20, DARKBLUE);
+
         EndDrawing();
     }
 
+    // Очистка при выходе
+    if (bookInHand) delete bookInHand;
     CloseWindow();
     return 0;
 }
