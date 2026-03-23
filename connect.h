@@ -9,9 +9,7 @@
 
 			public:
 				void insertBook(const std::string& name, const std::string& author, int age);
-				std::vector<Book> showBook();
-				static int countCallback(void* data, int argc, char** argv, char** azColName);
-
+				sqlite3* getDb() { return db; }
 				ConnectDB();  // Только заголовок конструктора
 				~ConnectDB(); // Только заголовок деструктора
 			};

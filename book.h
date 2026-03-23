@@ -1,7 +1,10 @@
 #pragma once
+#include "sqlite3.h"
 #include <iostream>
 #include <vector>
 #include <string>
+#include "C:/raylib/raylib-5.5_win64_msvc16/include/raylib.h"
+
 
 class Book {
 private:
@@ -24,6 +27,11 @@ public:
     Book& take_book(Book& object);
     static int getCount();
     void setCount(int n) { value = n; }
+    // Добавь в public:
+    void draw(int x, int y, Color color);
+
+    std::vector<Book> showBook(sqlite3* db);
+    static int countCallback(void* data, int argc, char** argv, char** azColName);
 };
 
 
